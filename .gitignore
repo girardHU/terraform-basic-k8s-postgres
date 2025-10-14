@@ -1,0 +1,62 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+
+# Terraform lock files (uncomment if you want to ignore these)
+.terraform.lock.hcl
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets.tfvars
+override.tfvars
+
+# Kubeconfig (contains sensitive cluster credentials)
+kubeconfig.yaml
+*.kubeconfig
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# Local development overrides
+terraform.tfvars.local
+variables.local.tf
+
+# Crash recovery files
+crash.log
+crash.*.log
