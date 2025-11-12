@@ -49,7 +49,7 @@ resource "kubernetes_stateful_set" "postgres" {
   }
 
   spec {
-    replicas = 1  # Start with 1 replica (set to 2 for HA after setting up replication)
+    replicas = 2
     service_name = "postgres"
 
     selector {
