@@ -1,163 +1,89 @@
-# Terraform Scaleway Kapsule + PostgreSQL Setup
+# Terraform Scaleway K8s + PostgreSQL
 
-This project deploys a Scaleway Kubernetes cluster with PostgreSQL database.
+Deploys a Kubernetes cluster on Scaleway with a PostgreSQL database accessible via public LoadBalancer.
 
-## Architecture
+## What's Included
 
-- **Infrastructure**: Scaleway Kapsule Kubernetes cluster with VPC private network
-- **Database**: PostgreSQL with 2 replicas and LoadBalancer for external access
-- **Storage**: Persistent volumes for PostgreSQL data
+- Scaleway Kapsule Kubernetes cluster with VPC private network
+- PostgreSQL StatefulSet with persistent storage
+- LoadBalancer service for external database access
 
 ## Prerequisites
 
-1. **Scaleway Account**: Sign up at [scaleway.com](https://scaleway.com)
-2. **Scaleway CLI**: Install and configure with your credentials
-   ```bash
-   # Install Scaleway CLI
-   curl -fsSL https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/install.sh | sh
+- Scaleway account ([sign up here](https://console.scaleway.com))
+- Terraform (v1.0+)
+- Scaleway CLI (`scw`) - [installation guide](https://github.com/scaleway/scaleway-cli)
+- kubectl
 
-   # Authenticate (replace with your tokens)
-   scw config set access-key=your-access-key
-   scw config set secret-key=your-secret-key
-   scw config set default-project-id=your-project-id
-   ```
+## Quick Setup
 
-## Deployment Steps
+### 1. Configure Scaleway Credentials
 
-### Step 1: Deploy Infrastructure
+Create `terraform.tfvars` in the project root:
 
-Deploy the Scaleway Kubernetes cluster:
-
-```bash
-# Initialize Terraform (if not done already)
-terraform init
-
-# Deploy the infrastructure
-terraform apply
-
-# The deployment will create:
-# - VPC private network
-# - Kubernetes cluster
-# - Node pool
+```hcl
+access_key      = "your-scaleway-access-key"
+secret_key      = "your-scaleway-secret-key"
+organization_id = "your-scaleway-org-id"
+project_id      = "your-scaleway-project-id"
 ```
 
-### Step 2: Get Kubeconfig
-
-After the cluster is created, download the kubeconfig:
+### 2. Deploy Kubernetes Cluster
 
 ```bash
-# Get cluster ID from Terraform output
+terraform init
+terraform apply
+```
+
+Wait ~5-10 minutes for cluster creation.
+
+### 3. Get Kubeconfig
+
+```bash
 CLUSTER_ID=$(terraform output -raw cluster_id)
-
-# Download kubeconfig
-scw k8s kubeconfig get $CLUSTER_ID > ~/.kube/config
-
-# Or copy it to your preferred location
 scw k8s kubeconfig get $CLUSTER_ID > kubeconfig.yaml
 ```
 
-### Step 3: Deploy PostgreSQL
-
-Deploy PostgreSQL to the Kubernetes cluster:
+### 4. Deploy PostgreSQL
 
 ```bash
-# Go to k8s directory
 cd k8s
-
-# Initialize Terraform for k8s resources
 terraform init
-
-# Update kubeconfig path if needed
-# Edit terraform-k8s.tf and change kubeconfig_path if necessary
-
-# Deploy PostgreSQL
-terraform apply
-
-# Get connection details
-terraform output postgres_connection_string
+terraform apply -var="postgres_password=changeme" -var="postgres_image=postgres:15"
 ```
 
-## Configuration
+Wait ~3-5 minutes for LoadBalancer provisioning.
 
-### Infrastructure Variables
-
-Edit `terraform.tfvars` or set environment variables:
-
-```hcl
-region          = "fr-par"  # Scaleway region
-zone           = "fr-par-2" # Scaleway zone
-cluster_name   = "tf-k8s-cluster"
-node_pool_name = "tf-node-pool"
-node_count     = 2
-node_type      = "DEV1-M"
-k8s_version    = "1.34.1"
-k8s_cni        = "cilium"
-```
-
-### PostgreSQL Variables
-
-In `k8s/terraform-k8s.tf`:
-
-```hcl
-postgres_image    = "postgres:15"  # PostgreSQL version
-postgres_password = "your-secure-password"
-kubeconfig_path   = "~/.kube/config"  # Path to kubeconfig
-```
-
-## Troubleshooting
-
-### Scaleway API 503 Errors
-
-If you encounter 503 errors during deployment:
-
-1. **Check Scaleway Status**: Visit [status.scaleway.com](https://status.scaleway.com)
-2. **Retry**: The API might be temporarily unavailable
-3. **Check Quotas**: Ensure you have sufficient resources in your account
-
-### Kubeconfig Issues
-
-If the kubeconfig download fails:
+### 5. Get Connection Info
 
 ```bash
-# List available clusters
-scw k8s cluster list
+# Get external IP
+terraform output postgres_service_ip
 
-# Get kubeconfig manually from Scaleway console
-# Go to https://console.scaleway.com/ → Kubernetes → Your Cluster → Kubeconfig
+# Or full connection string
+terraform output -sensitive postgres_connection_string
 ```
 
-### PostgreSQL Connection Issues
+### 6. Test Connection
 
-If PostgreSQL connection fails:
+```bash
+# Get the IP
+PG_IP=$(terraform output -raw postgres_service_ip)
 
-1. **Check LoadBalancer Status**:
-   ```bash
-   kubectl get services -n database
-   ```
-
-2. **Wait for LoadBalancer**: It may take a few minutes for the external IP to be assigned
-
-3. **Check Pods**:
-   ```bash
-   kubectl get pods -n database
-   kubectl logs -n database deployment/postgres
-   ```
+# Connect with psql
+psql -h $PG_IP -U myuser -d mydb
+# Password: changeme (or your custom password)
+```
 
 ## Cleanup
 
-To destroy all resources:
-
 ```bash
-# Destroy k8s resources first
-cd k8s && terraform destroy
+# Destroy PostgreSQL first
+cd k8s && terraform destroy -var="postgres_password=changeme"
 
-# Then destroy infrastructure
-terraform destroy
+# Then destroy cluster
+cd .. && terraform destroy
 ```
 
-## Security Notes
+## Detailed Documentation
 
-- Change default passwords before production use
-- Use Kubernetes secrets for sensitive data
-- Consider using private LoadBalancers for production
-- Enable Kubernetes RBAC as needed

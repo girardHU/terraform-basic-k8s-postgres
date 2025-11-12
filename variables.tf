@@ -1,13 +1,8 @@
 variable "region" {
-  description = "Scaleway region"
-  type        = string
-  default     = "fr-par"
+  default = "nl-ams"
 }
-
 variable "zone" {
-  description = "Scaleway zone"
-  type        = string
-  default     = "fr-par-2"
+  default = "nl-ams-1"
 }
 
 variable "cluster_name" {

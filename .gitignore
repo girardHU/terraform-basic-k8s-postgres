@@ -55,6 +55,7 @@ Thumbs.db
 
 # Local development overrides
 terraform.tfvars.local
+terraform.tfvars
 variables.local.tf
 
 # Crash recovery files

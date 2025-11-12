@@ -32,33 +32,14 @@ resource "kubernetes_secret" "pg" {
   }
 
   data = {
-    POSTGRES_PASSWORD = base64encode(var.postgres_password)
+    POSTGRES_PASSWORD = var.postgres_password
   }
 
   type = "Opaque"
 }
 
-# PersistentVolumeClaim (uses the cluster's default StorageClass, typically scw-bssd on Kapsule)
-resource "kubernetes_persistent_volume_claim" "pg_pvc" {
-  metadata {
-    name      = "pg-data"
-    namespace = kubernetes_namespace.db.metadata[0].name
-  }
-
-  spec {
-    access_modes = ["ReadWriteOnce"]
-    resources {
-      requests = {
-        storage = "20Gi"
-      }
-    }
-    # optional: specify storage_class_name if you prefer, e.g. "scw-bssd"
-    # storage_class_name = "scw-bssd"
-  }
-}
-
-# Deployment
-resource "kubernetes_deployment" "postgres" {
+# StatefulSet for PostgreSQL
+resource "kubernetes_stateful_set" "postgres" {
   metadata {
     name      = "postgres"
     namespace = kubernetes_namespace.db.metadata[0].name
@@ -68,7 +49,8 @@ resource "kubernetes_deployment" "postgres" {
   }
 
   spec {
-    replicas = 2
+    replicas = 1  # Start with 1 replica (set to 2 for HA after setting up replication)
+    service_name = "postgres"
 
     selector {
       match_labels = {
@@ -90,6 +72,7 @@ resource "kubernetes_deployment" "postgres" {
 
           port {
             container_port = 5432
+            name          = "postgres"
           }
 
           env {
@@ -136,27 +119,21 @@ resource "kubernetes_deployment" "postgres" {
             name       = "pgdata"
             mount_path = "/var/lib/postgresql/data"
           }
-
-          volume_mount {
-            name       = "postgres-config"
-            mount_path = "/etc/postgresql/config"
-            read_only  = true
-          }
         }
+      }
+    }
 
-        volume {
-          name = "pgdata"
-
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.pg_pvc.metadata[0].name
-          }
-        }
-
-        volume {
-          name = "postgres-config"
-
-          config_map {
-            name = kubernetes_config_map.postgres_config.metadata[0].name
+    # Use volumeClaimTemplates for StatefulSet (creates one PVC per pod)
+    volume_claim_template {
+      metadata {
+        name = "pgdata"
+      }
+      spec {
+        access_modes       = ["ReadWriteOnce"]
+        storage_class_name = "scw-bssd"
+        resources {
+          requests = {
+            storage = "20Gi"
           }
         }
       }
