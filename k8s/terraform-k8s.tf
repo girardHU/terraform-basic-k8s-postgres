@@ -9,13 +9,6 @@ terraform {
 
 provider "kubernetes" {
   config_path = var.kubeconfig_path
-
-  # Add timeout and retry configuration
-  # exec {
-  #   api_version = "client.authentication.k8s.io/v1beta1"
-  #   command     = "kubectl"
-  #   args        = ["--kubeconfig", var.kubeconfig_path, "get", "--raw", "/api/v1"]
-  # }
 }
 
 variable "kubeconfig_path" {

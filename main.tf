@@ -38,13 +38,6 @@ resource "scaleway_k8s_pool" "nodes" {
   node_type = var.node_type
   size      = var.node_count
   zone      = var.zone
-
-  # autoscaling block is optional; using fixed size here
-  # autoscaling {
-  #   enabled = true
-  #   min_size = 1
-  #   max_size = 3
-  # }
 }
 
 resource "scaleway_vpc_private_network" "pn" {
